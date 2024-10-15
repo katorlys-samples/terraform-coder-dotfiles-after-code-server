@@ -37,7 +37,7 @@ module "dotfiles-after-code-server" {
   source         = "katorlys-samples/dotfiles-after-code-server/coder"
   version        = "0.1.0"
   agent_id       = coder_agent.example.id
-  url            = "http://localhost:13337/?folder=/home/coder"
+  folder         = "/home/coder"
 }
 ```
 

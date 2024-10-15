@@ -121,8 +121,6 @@ run_code_server
 DOTFILES_URI="${DOTFILES_URI}"
 DOTFILES_USER="${DOTFILES_USER}"
 
-echo "Running install.sh..."
-
 if [ -n "$${DOTFILES_URI// }" ]; then
   if [ -z "$DOTFILES_USER" ]; then
     DOTFILES_USER="$USER"
@@ -142,5 +140,3 @@ if [ -n "$${DOTFILES_URI// }" ]; then
     sudo -u "$DOTFILES_USER" sh -c "'$CODER_BIN' dotfiles '$DOTFILES_URI' -y 2>&1 | tee '$DOTFILES_USER_HOME'/.dotfiles.log"
   fi
 fi
-
-echo "Dotfiles installation complete."
