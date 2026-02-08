@@ -4,7 +4,7 @@ terraform {
   required_providers {
     coder = {
       source  = "coder/coder"
-      version = ">= 0.17"
+      version = ">= 2.5"
     }
   }
 }
@@ -16,7 +16,7 @@ data "coder_parameter" "dotfiles_uri" {
   display_name = "Dotfiles URL"
   order        = var.coder_parameter_order
   default      = var.default_dotfiles_uri
-  description  = "Enter a URL for a [dotfiles repository](https://dotfiles.github.io) to personalize your workspace"
+  description  = var.description
   mutable      = true
   icon         = "/icon/dotfiles.svg"
 }
@@ -39,12 +39,14 @@ resource "coder_script" "dotfiles-after-code-server" {
     INSTALL_PREFIX : var.install_prefix,
     // This is necessary otherwise the quotes are stripped!
     SETTINGS : replace(jsonencode(var.settings), "\"", "\\\""),
+    MACHINE_SETTINGS : replace(jsonencode(var.machine-settings), "\"", "\\\""),
     OFFLINE : var.offline,
     USE_CACHED : var.use_cached,
     USE_CACHED_EXTENSIONS : var.use_cached_extensions,
     EXTENSIONS_DIR : var.extensions_dir,
     FOLDER : var.folder,
     AUTO_INSTALL_EXTENSIONS : var.auto_install_extensions,
+    ADDITIONAL_ARGS : var.additional_args,
     DOTFILES_URI : local.dotfiles_uri,
     DOTFILES_USER : local.user
   })
@@ -72,6 +74,8 @@ resource "coder_app" "code-server" {
   subdomain    = var.subdomain
   share        = var.share
   order        = var.order
+  group        = var.group
+  open_in      = var.open_in
 
   healthcheck {
     url       = "http://localhost:${var.port}/healthz"
@@ -97,6 +101,8 @@ resource "coder_app" "dotfiles" {
   display_name = "Refresh Dotfiles"
   slug         = "dotfiles"
   icon         = "/icon/dotfiles.svg"
+  order        = var.order
+  group        = var.group
   command = templatefile("${path.module}/dotfiles_run.sh", {
     DOTFILES_URI : local.dotfiles_uri,
     DOTFILES_USER : local.user

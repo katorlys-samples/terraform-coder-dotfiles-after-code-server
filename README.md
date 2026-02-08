@@ -35,7 +35,7 @@ Combine [Coder code-server Module](https://registry.coder.com/modules/code-serve
 ```tf
 module "dotfiles-after-code-server" {
   source         = "katorlys-samples/dotfiles-after-code-server/coder"
-  version        = "0.1.0"
+  version        = "0.1.1"
   agent_id       = coder_agent.example.id
   folder         = "/home/coder"
 }

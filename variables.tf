@@ -28,8 +28,14 @@ variable "slug" {
 }
 
 variable "settings" {
-  type        = map(string)
+  type        = any
   description = "A map of settings to apply to code-server."
+  default     = {}
+}
+
+variable "machine-settings" {
+  type        = any
+  description = "A map of template level machine settings to apply to code-server. This will be overwritten at each container start."
   default     = {}
 }
 
@@ -72,6 +78,12 @@ variable "order" {
   default     = null
 }
 
+variable "group" {
+  type        = string
+  description = "The name of a group that this app belongs to."
+  default     = null
+}
+
 variable "offline" {
   type        = bool
   description = "Just run code-server in the background, don't fetch it from GitHub"
@@ -111,10 +123,36 @@ variable "subdomain" {
   default     = false
 }
 
+variable "open_in" {
+  type        = string
+  description = <<-EOT
+    Determines where the app will be opened. Valid values are "tab" and "slim-window" (default).
+    "tab" opens in a new tab in the same browser window.
+    "slim-window" opens a new browser window without navigation controls.
+  EOT
+  default     = "slim-window"
+  validation {
+    condition     = contains(["tab", "slim-window"], var.open_in)
+    error_message = "The 'open_in' variable must be one of: 'tab', 'slim-window'."
+  }
+}
+
+variable "additional_args" {
+  type        = string
+  description = "Additional command-line arguments to pass to code-server (e.g., '--disable-workspace-trust')."
+  default     = ""
+}
+
 variable "default_dotfiles_uri" {
   type        = string
   description = "The default dotfiles URI if the workspace user does not provide one"
   default     = ""
+}
+
+variable "description" {
+  type        = string
+  description = "A custom description for the dotfiles parameter. This is shown in the UI - and allows you to customize the instructions you give to your users."
+  default     = "Enter a URL for a [dotfiles repository](https://dotfiles.github.io) to personalize your workspace"
 }
 
 variable "dotfiles_uri" {

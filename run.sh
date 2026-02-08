@@ -16,14 +16,27 @@ fi
 function run_code_server() {
   echo "👷 Running code-server in the background..."
   echo "Check logs at ${LOG_PATH}!"
-  $CODE_SERVER "$EXTENSION_ARG" --auth none --port "${PORT}" --app-name "${APP_NAME}" > "${LOG_PATH}" 2>&1 &
+  $CODE_SERVER "$EXTENSION_ARG" --auth none --port "${PORT}" --app-name "${APP_NAME}" ${ADDITIONAL_ARGS} > "${LOG_PATH}" 2>&1 &
 }
 
 # Check if the settings file exists...
 if [ ! -f ~/.local/share/code-server/User/settings.json ]; then
   echo "⚙️ Creating settings file..."
   mkdir -p ~/.local/share/code-server/User
-  echo "${SETTINGS}" > ~/.local/share/code-server/User/settings.json
+  if command -v jq &> /dev/null; then
+    echo "${SETTINGS}" | jq '.' > ~/.local/share/code-server/User/settings.json
+  else
+    echo "${SETTINGS}" > ~/.local/share/code-server/User/settings.json
+  fi
+fi
+
+# Apply/overwrite template based settings
+echo "⚙️ Creating machine settings file..."
+mkdir -p ~/.local/share/code-server/Machine
+if command -v jq &> /dev/null; then
+  echo "${MACHINE_SETTINGS}" | jq '.' > ~/.local/share/code-server/Machine/settings.json
+else
+  echo "${MACHINE_SETTINGS}" > ~/.local/share/code-server/Machine/settings.json
 fi
 
 # Check if code-server is already installed for offline
@@ -42,6 +55,11 @@ fi
 if [ ! -f "$CODE_SERVER" ] || [ "${USE_CACHED}" != true ]; then
   printf "$${BOLD}Installing code-server!\n"
 
+  # Clean up from other install (in case install prefix changed).
+  if [ -n "$CODER_SCRIPT_BIN_DIR" ] && [ -e "$CODER_SCRIPT_BIN_DIR/code-server" ]; then
+    rm "$CODER_SCRIPT_BIN_DIR/code-server"
+  fi
+
   ARGS=(
     "--method=standalone"
     "--prefix=${INSTALL_PREFIX}"
@@ -58,6 +76,11 @@ if [ ! -f "$CODE_SERVER" ] || [ "${USE_CACHED}" != true ]; then
   printf "🥳 code-server has been installed in ${INSTALL_PREFIX}\n\n"
 fi
 
+# Make the code-server available in PATH.
+if [ -n "$CODER_SCRIPT_BIN_DIR" ] && [ ! -e "$CODER_SCRIPT_BIN_DIR/code-server" ]; then
+  ln -s "$CODE_SERVER" "$CODER_SCRIPT_BIN_DIR/code-server"
+fi
+
 # Get the list of installed extensions...
 LIST_EXTENSIONS=$($CODE_SERVER --list-extensions $EXTENSION_ARG)
 readarray -t EXTENSIONS_ARRAY <<< "$LIST_EXTENSIONS"
@@ -65,6 +88,7 @@ function extension_installed() {
   if [ "${USE_CACHED_EXTENSIONS}" != true ]; then
     return 1
   fi
+  # shellcheck disable=SC2066
   for _extension in "$${EXTENSIONS_ARRAY[@]}"; do
     if [ "$_extension" == "$1" ]; then
       echo "Extension $1 was already installed."
@@ -76,6 +100,7 @@ function extension_installed() {
 
 # Install each extension...
 IFS=',' read -r -a EXTENSIONLIST <<< "$${EXTENSIONS}"
+# shellcheck disable=SC2066
 for extension in "$${EXTENSIONLIST[@]}"; do
   if [ -z "$extension" ]; then
     continue
@@ -104,7 +129,8 @@ if [ "${AUTO_INSTALL_EXTENSIONS}" = true ]; then
 
   if [ -f "$WORKSPACE_DIR/.vscode/extensions.json" ]; then
     printf "🧩 Installing extensions from %s/.vscode/extensions.json...\n" "$WORKSPACE_DIR"
-    extensions=$(jq -r '.recommendations[]' "$WORKSPACE_DIR"/.vscode/extensions.json)
+    # Use sed to remove single-line comments before parsing with jq
+    extensions=$(sed 's|//.*||g' "$WORKSPACE_DIR"/.vscode/extensions.json | jq -r '.recommendations[]')
     for extension in $extensions; do
       if extension_installed "$extension"; then
         continue
@@ -121,6 +147,7 @@ run_code_server
 DOTFILES_URI="${DOTFILES_URI}"
 DOTFILES_USER="${DOTFILES_USER}"
 
+# shellcheck disable=SC2157
 if [ -n "$${DOTFILES_URI// }" ]; then
   if [ -z "$DOTFILES_USER" ]; then
     DOTFILES_USER="$USER"
